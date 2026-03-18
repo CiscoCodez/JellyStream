@@ -377,8 +377,8 @@ def main():
     location = check_location()
     print(f"\n📍 Running on: {location}")
 
-    # Load both databases
-    print("\n📚 Loading databases...")
+    # Load the SerienStream database
+    print("\n📚 Loading SerienStream database...")
     serienstream_data, serienstream_path = load_database("serienstream")
 
     if not serienstream_data:
@@ -393,17 +393,7 @@ def main():
     while True:
         print("\n" + "="*70)
         print("Updating SerienStream")
-        print("  0. Exit")
         print("="*70)
-
-        choice = input("Choice: ").strip()
-
-        if choice == "0":
-            print("👋 Goodbye!")
-            break
-        else:
-            print("❌ Invalid choice")
-            continue
 
         # Search for series
         query = input("\n🔍 Search for series: ").strip()
