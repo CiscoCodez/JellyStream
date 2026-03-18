@@ -26,7 +26,7 @@ public class UpdateController : ControllerBase
     [HttpPost("Series")]
     public ActionResult<UpdateResult> UpdateSeries(
         [FromQuery] string name,
-        [FromQuery] string site = "aniworld")
+        [FromQuery] string site = "serienstream")
     {
         try
         {

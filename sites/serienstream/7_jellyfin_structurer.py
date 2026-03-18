@@ -44,18 +44,7 @@ class JellyfinStructureGenerator:
         self.api_base_url = api_base_url
         self.series_data = []
         
-        # === LANGUAGE SETTING (CHANGE HERE) ===
-        # Priority system: German first, then English, then German Subtitles
-        self.LANGUAGE_PRIORITY = [
-            "Deutsch",                    # 1st priority: German audio
-            "Englisch",                   # 2nd priority: English audio  
-            "mit deutschen Untertiteln"   # 3rd priority: German subtitles
-        ]
-        
-        # Alternative: Single language only (uncomment to use)
-        # self.GERMAN_ONLY = True
-        # self.ENGLISH_ONLY = False  
-        # self.GERMAN_SUB_ONLY = False
+        self.LANGUAGE_PRIORITY = list(config.LANGUAGE_PRIORITY)
         
         # Progress tracking
         self.progress_file = self.output_dir / '.structure_progress.json'
@@ -72,8 +61,8 @@ class JellyfinStructureGenerator:
             'episodes_skipped_no_language': 0,
             'movies_skipped_no_streams': 0,
             'movies_skipped_no_language': 0,
-            'episodes_by_language': {'Deutsch': 0, 'Englisch': 0, 'mit deutschen Untertiteln': 0},
-            'movies_by_language': {'Deutsch': 0, 'Englisch': 0, 'mit deutschen Untertiteln': 0},
+            'episodes_by_language': {language: 0 for language in self.LANGUAGE_PRIORITY},
+            'movies_by_language': {language: 0 for language in self.LANGUAGE_PRIORITY},
             'errors': 0,
             'last_disk_check': 0
         }
@@ -313,7 +302,7 @@ class JellyfinStructureGenerator:
     def generate_structure(self, limit=None, batch_size=1000, wait_minutes=0):
         """Main generation function"""
         print("🚀 Starting Jellyfin structure generation...")
-        print("🌍 Language Priority: German → English → German Subtitles")
+        print(f"🌍 Language Priority: {' → '.join(self.LANGUAGE_PRIORITY)}")
         
         # Load data and progress
         self.load_data()
@@ -382,7 +371,7 @@ class JellyfinStructureGenerator:
         print("\n" + "="*60)
         print("📊 JELLYFIN STRUCTURE GENERATION COMPLETE")
         print("="*60)
-        print("🌍 Language Priority: German → English → German Subtitles")
+        print(f"🌍 Language Priority: {' → '.join(self.LANGUAGE_PRIORITY)}")
         print(f"✅ Series processed: {self.stats['series_processed']:,}")
         print(f"✅ Series created: {self.stats['series_created']:,}")
         print(f"✅ Seasons created: {self.stats['seasons_created']:,}")

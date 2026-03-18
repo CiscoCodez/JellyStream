@@ -20,8 +20,9 @@ FINAL_OUTPUT = f"{DATA_DIR}/final_series_data.json"
 # Jellyfin settings
 JELLYFIN_OUTPUT_DIR = "/media/jellyfin/serienstream"
 
-# Language priority (used by structurer)
-LANGUAGE_PRIORITY = ["Deutsch", "Englisch", "mit deutschen Untertiteln"]
+# English-dub only
+TARGET_LANGUAGE = "Englisch"
+LANGUAGE_PRIORITY = [TARGET_LANGUAGE]
 
 # Provider priority
 PROVIDER_PRIORITY = ["VOE", "Vidoza", "Streamtape"]

@@ -76,13 +76,6 @@
 
                 <h2 class="sectionTitle">Search and Update Series</h2>
                 <div class="searchContainer">
-                    <div class="selectContainer">
-                        <label class="selectLabel" for="selectSite">Site</label>
-                        <select is="emby-select" id="selectSite" name="selectSite">
-                            <option value="aniworld">Aniworld</option>
-                            <option value="serienstream">SerienStream</option>
-                        </select>
-                    </div>
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="txtSearch">Series Name</label>
                         <input id="txtSearch" name="txtSearch" type="text" is="emby-input" />
@@ -223,7 +216,7 @@
             });
 
             document.querySelector('#btnSearch').addEventListener('click', function() {
-                var site = document.querySelector('#selectSite').value;
+                var site = 'serienstream';
                 var query = document.querySelector('#txtSearch').value.trim();
 
                 if (!query) {

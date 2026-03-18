@@ -23,7 +23,7 @@ public class SeriesController : ControllerBase
 
     [HttpGet("Search")]
     public async Task<ActionResult<List<SeriesInfo>>> SearchSeries(
-        [FromQuery] string site = "aniworld",
+        [FromQuery] string site = "serienstream",
         [FromQuery] string query = "")
     {
         try

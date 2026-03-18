@@ -30,6 +30,7 @@ class EpisodeStreamsAnalyzer:
         self.data_folder = Path(config.DATA_DIR)
         self.input_file = self.data_folder / "tmp_season_episode_data.json"
         self.output_file = self.data_folder / "tmp_episode_streams.json"
+        self.target_language = getattr(config, "TARGET_LANGUAGE", "Englisch")
     
     def load_series_data(self) -> List[Dict]:
         """Load series data from input file"""
@@ -256,11 +257,14 @@ class EpisodeStreamsAnalyzer:
                 endpoint_info = self.parse_endpoint(endpoint, movie_count)
                 languages, streams = self.analyze_episode(endpoint)
                 
-                # Group streams by language
+                # Keep only English-dubbed streams in the exported dataset.
                 streams_by_language = {}
                 for stream in streams:
                     lang_key = stream['language_key']
                     lang_name = languages.get(lang_key, f"Language_{lang_key}")
+
+                    if lang_name != self.target_language:
+                        continue
                     
                     if lang_name not in streams_by_language:
                         streams_by_language[lang_name] = []
@@ -272,9 +276,11 @@ class EpisodeStreamsAnalyzer:
                 
                 episode_data = {
                     'url': endpoint,
-                    'languages': languages,
+                    'languages': {
+                        key: value for key, value in languages.items() if value == self.target_language
+                    },
                     'streams_by_language': streams_by_language,
-                    'total_streams': len(streams)
+                    'total_streams': sum(len(language_streams) for language_streams in streams_by_language.values())
                 }
                 
                 # Store in appropriate structure

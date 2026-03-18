@@ -380,22 +380,19 @@ def main():
     # Load both databases
     print("\n📚 Loading databases...")
     serienstream_data, serienstream_path = load_database("serienstream")
-    aniworld_data, aniworld_path = load_database("aniworld")
 
-    if not serienstream_data and not aniworld_data:
+    if not serienstream_data:
         print("❌ No databases could be loaded!")
         return
 
-    # Collect series to update
-    series_to_update = []  # List of (site_name, data, db_path, series_idx, series)
+    site_name = "serienstream"
+    data = serienstream_data
+    db_path = serienstream_path
+    series_to_update = []
 
     while True:
         print("\n" + "="*70)
-        print("Select site to update:")
-        if serienstream_data:
-            print("  1. SerienStream")
-        if aniworld_data:
-            print("  2. Aniworld")
+        print("Updating SerienStream")
         print("  0. Exit")
         print("="*70)
 
@@ -404,14 +401,6 @@ def main():
         if choice == "0":
             print("👋 Goodbye!")
             break
-        elif choice == "1" and serienstream_data:
-            site_name = "serienstream"
-            data = serienstream_data
-            db_path = serienstream_path
-        elif choice == "2" and aniworld_data:
-            site_name = "aniworld"
-            data = aniworld_data
-            db_path = aniworld_path
         else:
             print("❌ Invalid choice")
             continue
@@ -568,7 +557,7 @@ def plugin_mode():
 
     parser = argparse.ArgumentParser(description='Manual Series Updater - Plugin Mode')
     parser.add_argument('--plugin', action='store_true', help='Enable plugin mode (non-interactive)')
-    parser.add_argument('--site', choices=['aniworld', 'serienstream'], help='Site name')
+    parser.add_argument('--site', choices=['serienstream'], help='Site name')
     parser.add_argument('--series-name', help='Series jellyfin_name or name to update')
     parser.add_argument('--list-series', action='store_true', help='List all series as JSON')
     parser.add_argument('--search', help='Search for series (returns JSON)')

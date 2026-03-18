@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-main.py - Simple Streaming API for Jellyfin (VOE-focused with absolute URLs)
-"""
+"""Simple Streaming API for Jellyfin using SerienStream redirect data."""
 import logging
 import time
 import os
@@ -38,13 +36,6 @@ voe_provider = None
 simple_cache = {}  # redirect_id -> {'stream_url': url, 'expires': timestamp, 'provider': str}
 season_caching_locks = set()  # Track which seasons are being cached
 CACHE_HOURS = 1  # 1 hour cache for HLS streams
-
-# Language preferences
-LANGUAGE_PREFERENCES = {
-    'german': True,      # Prioritize German streams
-    'english': False,    # Include English streams as fallback
-    'german_sub': False  # Include German subtitled streams as fallback
-}
 
 def is_cache_valid(cache_entry):
     """Check if cache entry is still valid"""
@@ -124,9 +115,7 @@ def _cache_season_background(season_episodes, skip_redirect_id, season_lock_key)
                 if not ep_info:
                     continue
 
-                # Build correct redirect URL based on source site
-                source_site = ep_info.get('source_site', 'serienstream')
-                redirect_url = f"https://{source_site}.to/redirect/{redirect_id}"
+                redirect_url = f"https://serienstream.to/redirect/{redirect_id}"
                 provider_url = redirect_resolver.resolve_redirect(redirect_url)
                 
                 if provider_url:
@@ -166,9 +155,8 @@ def stream_direct(redirect_id):
             if not episode_info:
                 return jsonify({"error": f"Redirect ID {redirect_id} not found"}), 404
 
-            # Get provider URL using correct source site
-            source_site = episode_info.get('source_site', 'serienstream')
-            redirect_url = f"https://{source_site}.to/redirect/{redirect_id}"
+            source_site = "serienstream"
+            redirect_url = f"https://serienstream.to/redirect/{redirect_id}"
             provider_url = redirect_resolver.resolve_redirect(redirect_url)
 
             if not provider_url:
@@ -221,8 +209,7 @@ def stream_redirect(redirect_id):
                 return jsonify({'error': 'Redirect ID not found'}), 404
 
             # Resolve redirect to get provider URL using correct source site
-            source_site = episode_info.get('source_site', 'serienstream')
-            redirect_url = f"https://{source_site}.to/redirect/{redirect_id}"
+            redirect_url = f"https://serienstream.to/redirect/{redirect_id}"
             logging.info(f"🔍 Resolving {redirect_id} ({source_site}) for {episode_info['series_name']} S{episode_info['season_num']}E{episode_info['episode_num']}")
             
             # Step 1: Get the direct provider URL
@@ -361,10 +348,8 @@ def test_redirect(redirect_id):
     try:
         # Get episode info to determine source site
         episode_info = data_loader.find_episode_by_redirect(redirect_id)
-        source_site = episode_info.get('source_site', 'serienstream') if episode_info else 'serienstream'
-
-        redirect_url = f"https://{source_site}.to/redirect/{redirect_id}"
-        logging.info(f"🧪 Testing redirect resolution for {redirect_id} ({source_site})")
+        redirect_url = f"https://serienstream.to/redirect/{redirect_id}"
+        logging.info(f"🧪 Testing redirect resolution for {redirect_id} (serienstream)")
 
         # Step 1: Resolve redirect
         provider_url = redirect_resolver.resolve_redirect(redirect_url)

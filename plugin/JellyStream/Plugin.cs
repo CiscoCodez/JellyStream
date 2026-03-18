@@ -20,7 +20,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 
     public override Guid Id => Guid.Parse("a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d");
 
-    public override string Description => "Manual stream updater for Aniworld and SerienStream";
+    public override string Description => "Manual stream updater for SerienStream";
 
     public static Plugin? Instance { get; private set; }
 
