@@ -86,6 +86,9 @@ class CatalogScraper:
                     
                     if not series_name or not series_endpoint:
                         continue
+
+                    if series_endpoint.startswith('/serie/') and not series_endpoint.startswith('/serie/stream/'):
+                        series_endpoint = series_endpoint.replace('/serie/', '/serie/stream/', 1)
                     
                     series_url = urljoin(self.base_url, series_endpoint)
                     
