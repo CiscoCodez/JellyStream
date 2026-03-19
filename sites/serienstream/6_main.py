@@ -49,6 +49,14 @@ class SerienStreamOrchestrator:
             'streams': self.data_folder / 'tmp_episode_streams.json',
             'final': self.data_folder / 'final_series_data.json'
         }
+
+        # Per-step timeouts. None means no timeout.
+        self.script_timeouts = {
+            'catalog': 14400,
+            'structure': 14400,
+            'streams': None,
+            'structurer': 14400
+        }
     
     def get_optimal_batch_size(self) -> int:
         """Calculate optimal batch size based on available RAM"""
@@ -244,6 +252,11 @@ class SerienStreamOrchestrator:
             self.logger.info(f"Added batch size: {self.batch_size}")
         
         self.logger.info(f"Running: {' '.join(cmd)}")
+        timeout_seconds = self.script_timeouts.get(script_name, 14400)
+        if timeout_seconds is None:
+            self.logger.info("Timeout: disabled for this step")
+        else:
+            self.logger.info(f"Timeout: {timeout_seconds/3600:.1f} hours")
         
         start_time = time.time()
         
@@ -262,7 +275,7 @@ class SerienStreamOrchestrator:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=14400  # 4 hour timeout for batch processing
+                timeout=timeout_seconds
             )
             
             duration = time.time() - start_time
@@ -296,7 +309,10 @@ class SerienStreamOrchestrator:
                 return False
                 
         except subprocess.TimeoutExpired:
-            self.logger.error(f"{description} timed out after 4 hours")
+            if timeout_seconds is None:
+                self.logger.error(f"{description} timed out")
+            else:
+                self.logger.error(f"{description} timed out after {timeout_seconds/3600:.1f} hours")
             return False
         except Exception as e:
             self.logger.error(f"Error running {description}: {e}")

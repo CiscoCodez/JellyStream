@@ -31,6 +31,19 @@ class EpisodeStreamsAnalyzer:
         self.input_file = self.data_folder / "tmp_season_episode_data.json"
         self.output_file = self.data_folder / "tmp_episode_streams.json"
         self.target_language = getattr(config, "TARGET_LANGUAGE", "Englisch")
+
+    def count_series_streams(self, series_data: Dict) -> int:
+        """Count matching streams stored inside one analyzed series."""
+        movie_streams = sum(
+            sum(len(streams) for streams in movie.get('streams_by_language', {}).values())
+            for movie in series_data.get('movies', {}).values()
+        )
+        episode_streams = sum(
+            sum(len(streams) for streams in episode.get('streams_by_language', {}).values())
+            for season in series_data.get('seasons', {}).values()
+            for episode in season.get('episodes', {}).values()
+        )
+        return movie_streams + episode_streams
     
     def load_series_data(self) -> List[Dict]:
         """Load series data from input file"""
@@ -401,7 +414,8 @@ class EpisodeStreamsAnalyzer:
                         # Count results
                         movies = len(result.get('movies', {}))
                         episodes = sum(len(season.get('episodes', {})) for season in result.get('seasons', {}).values())
-                        print(f"      ✅ Completed: {movies} movies, {episodes} episodes processed")
+                        streams_found = self.count_series_streams(result)
+                        print(f"      ✅ Completed: {movies} movies, {episodes} episodes processed, {streams_found} matching streams found")
                             
                     except Exception as e:
                         errors += 1
@@ -426,6 +440,8 @@ class EpisodeStreamsAnalyzer:
             print(f"📊 Processed: {total_processed} series | Errors: {errors}")
             print(f"🎬 Final stats: {existing_data.get('total_movies', 0)} movies")
             print(f"📺 Final episodes: {existing_data.get('total_episodes', 0)} episodes")
+            total_streams = sum(self.count_series_streams(series) for series in existing_data.get('series', []))
+            print(f"🔗 Final streams: {total_streams} matching streams")
             
             return True
         
