@@ -13,6 +13,7 @@ from bs4 import BeautifulSoup
 import json
 import time
 from typing import Dict, List, Optional
+from urllib.parse import urljoin
 from pathlib import Path
 import config
 
@@ -28,6 +29,32 @@ class SeriesStructureAnalyzer:
         self.data_folder = Path(config.DATA_DIR)
         self.input_file = self.data_folder / "tmp_name_url.json"
         self.output_file = self.data_folder / "tmp_season_episode_data.json"
+
+    def get_soup(self, url: str) -> Optional[BeautifulSoup]:
+        """Fetch a page and return a soup object."""
+        try:
+            response = self.session.get(url, timeout=15)
+            if response.status_code != 200:
+                return None
+            return BeautifulSoup(response.content, 'html.parser')
+        except Exception:
+            return None
+
+    def find_labeled_list(self, soup: BeautifulSoup, label_text: str):
+        """Find the first <ul> whose text starts with a specific label."""
+        for ul in soup.find_all('ul'):
+            text = ul.get_text(" ", strip=True)
+            if text.startswith(label_text):
+                return ul
+        return None
+
+    def normalize_series_url(self, url: str) -> str:
+        """Ensure all series URLs use the /serie/stream/ pattern."""
+        if '/serie/stream/' in url:
+            return url.rstrip('/')
+        if '/serie/' in url:
+            return url.replace('/serie/', '/serie/stream/', 1).rstrip('/')
+        return url.rstrip('/')
     
     def load_series_data(self) -> List[Dict]:
         """Load series URLs from input file"""
@@ -93,99 +120,109 @@ class SeriesStructureAnalyzer:
             return existing_data or {}
     
     def has_filme_endpoint(self, series_url: str) -> tuple[bool, int]:
-        """Check if series has /filme endpoint and count movies"""
+        """Check if series has a filme page and count linked movies."""
         filme_url = series_url.rstrip('/') + '/filme'
-        
-        try:
-            response = self.session.get(filme_url, timeout=15)
-            if response.status_code != 200:
-                return False, 0
-            
-            soup = BeautifulSoup(response.content, 'html.parser')
-            season_table = soup.find('table', {'class': 'seasonEpisodesList', 'data-season-id': '0'})
-            if season_table:
-                tbody = season_table.find('tbody')
-                if tbody:
-                    return True, len(tbody.find_all('tr'))
+        soup = self.get_soup(filme_url)
+        if not soup:
             return False, 0
-        except:
+
+        movie_table = soup.find('table')
+        if not movie_table:
             return False, 0
-    
-    def get_season_count(self, series_url: str, has_filme: bool) -> int:
-        """Get number of seasons from navigation"""
-        try:
-            response = self.session.get(series_url, timeout=15)
-            if response.status_code != 200:
-                return 0
-            
-            soup = BeautifulSoup(response.content, 'html.parser')
-            nav_element = soup.find('div', {'class': 'hosterSiteDirectNav', 'id': 'stream'})
-            if not nav_element:
-                return 0
-            
-            for ul in nav_element.find_all('ul'):
-                span_text = ul.find('span')
-                if span_text and 'staffeln' in span_text.get_text().lower():
-                    total_items = len(ul.find_all('li'))
-                    return max(0, total_items - (2 if has_filme else 1))
-            return 0
-        except:
-            return 0
-    
-    def get_episode_counts(self, series_url: str, season_count: int) -> List[int]:
-        """Get episode count for each season by visiting individual season pages"""
-        episode_counts = []
-        
-        for season_num in range(1, season_count + 1):
-            try:
-                season_url = f"{series_url}/staffel-{season_num}"
-                response = self.session.get(season_url, timeout=15)
-                if response.status_code != 200:
-                    episode_counts.append(0)
-                    continue
-                
-                soup = BeautifulSoup(response.content, 'html.parser')
-                season_table = soup.find(id=f"season{season_num}")
-                
-                if season_table:
-                    episode_counts.append(len(season_table.find_all('tr')))
-                else:
-                    episode_counts.append(0)
-                
-            except:
-                episode_counts.append(0)
-        
-        return episode_counts
+
+        movie_rows = movie_table.find_all('tr')
+        movie_count = 0
+        for row in movie_rows:
+            if row.find('th'):
+                continue
+            if row.find('a', href=True):
+                movie_count += 1
+
+        return movie_count > 0, movie_count
+
+    def get_season_numbers(self, soup: BeautifulSoup) -> List[int]:
+        """Get available season numbers from the current page."""
+        seasons_ul = self.find_labeled_list(soup, 'Staffeln:')
+        if not seasons_ul:
+            return []
+
+        season_numbers = []
+        for link in seasons_ul.find_all('a', href=True):
+            text = link.get_text(strip=True)
+            if text.isdigit():
+                season_numbers.append(int(text))
+
+        return sorted(set(season_numbers))
+
+    def get_episode_endpoints_for_season(self, series_url: str, season_num: int) -> List[str]:
+        """Get episode endpoints from a specific season page."""
+        season_url = f"{series_url}/staffel-{season_num}"
+        soup = self.get_soup(season_url)
+        if not soup:
+            return []
+
+        table = soup.find('table')
+        if not table:
+            return []
+
+        endpoints = []
+        seen = set()
+
+        for row in table.find_all('tr'):
+            if row.find('th'):
+                continue
+
+            link = row.find('a', href=True)
+            if not link:
+                continue
+
+            href = link.get('href', '')
+            if '/episode-' not in href:
+                continue
+
+            endpoint = urljoin(config.BASE_URL, href)
+            if '/serie/stream/' not in endpoint and '/serie/' in endpoint:
+                endpoint = endpoint.replace('/serie/', '/serie/stream/', 1)
+
+            if endpoint not in seen:
+                seen.add(endpoint)
+                endpoints.append(endpoint)
+
+        return endpoints
     
     def analyze_series(self, series: Dict) -> Dict:
         """Analyze a single series structure"""
-        series_url = series['url']
+        series_url = self.normalize_series_url(series['url'])
         series_name = series['name']
-        
-        # Check for /filme endpoint
+
+        soup = self.get_soup(series_url)
+        if not soup:
+            return {
+                'name': series_name,
+                'url': series_url,
+                'genre': series.get('genre', 'Unknown'),
+                'has_filme': False,
+                'movie_count': 0,
+                'season_count': 0,
+                'episode_counts': [],
+                'total_episodes': 0,
+                'total_content': 0,
+                'endpoints': []
+            }
+
         has_filme, movie_count = self.has_filme_endpoint(series_url)
-        
-        # Get season count
-        season_count = self.get_season_count(series_url, has_filme)
-        
-        # Get episode counts per season
-        episode_counts = self.get_episode_counts(series_url, season_count)
-        
-        # Generate episode endpoints
+        season_numbers = self.get_season_numbers(soup)
+        episode_counts = []
         endpoints = []
-        
-        # Add movie endpoints if they exist
+
         if has_filme and movie_count > 0:
             for i in range(1, movie_count + 1):
                 endpoints.append(f"{series_url}/filme/film-{i}")
-        
-        # Add season/episode endpoints (only for seasons with episodes)
-        for season_num in range(1, season_count + 1):
-            episode_count = episode_counts[season_num - 1] if season_num - 1 < len(episode_counts) else 0
-            # Only generate endpoints if season has episodes
-            if episode_count > 0:
-                for episode_num in range(1, episode_count + 1):
-                    endpoints.append(f"{series_url}/staffel-{season_num}/episode-{episode_num}")
+
+        for season_num in season_numbers:
+            season_endpoints = self.get_episode_endpoints_for_season(series_url, season_num)
+            episode_counts.append(len(season_endpoints))
+            endpoints.extend(season_endpoints)
         
         return {
             'name': series_name,
@@ -193,7 +230,7 @@ class SeriesStructureAnalyzer:
             'genre': series.get('genre', 'Unknown'),
             'has_filme': has_filme,
             'movie_count': movie_count,
-            'season_count': season_count,
+            'season_count': len(season_numbers),
             'episode_counts': episode_counts,
             'total_episodes': sum(episode_counts),
             'total_content': movie_count + sum(episode_counts),
