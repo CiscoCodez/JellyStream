@@ -51,7 +51,7 @@ class CatalogScraper:
         return {series['url'] for series in existing_data['series']}
     
     def scrape_all_genres(self, existing_urls: Set[str] = None) -> List[Dict]:
-        """Scrape ALL genres from SerienStream catalog"""
+        """Scrape the alphabetical SerienStream catalog."""
         if existing_urls is None:
             existing_urls = set()
         
@@ -60,30 +60,24 @@ class CatalogScraper:
             response.raise_for_status()
             
             soup = BeautifulSoup(response.content, 'html.parser')
-            series_container = soup.find('div', {'id': 'seriesContainer', 'class': 'seriesList'})
-            if not series_container:
+            letter_sections = soup.find_all('h3', class_='h5')
+            if not letter_sections:
                 return []
             
-            genre_sections = series_container.find_all('div', class_='genre')
             all_series = []
             
-            for genre_section in genre_sections:
-                # Get genre name
-                genre_name = "Unknown"
-                genre_list = genre_section.find('div', class_='seriesGenreList')
-                if genre_list:
-                    genre_title = genre_list.find('h3')
-                    if genre_title:
-                        genre_name = genre_title.get_text(strip=True)
-                
-                # Find series list
-                series_ul = genre_section.find('ul')
+            for heading in letter_sections:
+                letter = heading.get_text(strip=True)
+                if not letter:
+                    continue
+
+                # The catalog is grouped alphabetically: each <h3> is followed by a series list.
+                series_ul = heading.find_next('ul', class_='series-list')
                 if not series_ul:
                     continue
                 
-                # Extract all series links
-                for li in series_ul.find_all('li'):
-                    link = li.find('a')
+                for li in series_ul.find_all('li', class_='series-item'):
+                    link = li.find('a', href=True)
                     if not link:
                         continue
                     
@@ -102,12 +96,13 @@ class CatalogScraper:
                     all_series.append({
                         'name': series_name,
                         'url': series_url,
-                        'genre': genre_name
+                        'genre': "Unknown",
+                        'catalog_section': letter
                     })
             
             return all_series
             
-        except:
+        except Exception:
             return []
     
     def merge_with_existing(self, series_to_add: List[Dict], existing_data: Dict = None) -> Dict:
