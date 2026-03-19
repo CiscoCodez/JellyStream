@@ -9,7 +9,7 @@ Jellyfin crashes with `SIGABRT` (exit code 6) when scanning large libraries with
 - Jellyfin service exits with `code=killed, status=6/ABRT`
 - Log shows: `Stack overflow.`
 - Crash happens during library scan, typically in `ValidateSubFolders` function
-- Affects all Jellyfin versions (tested: 10.9.10, 10.10.7, 10.11.2)
+- Affects large SerienStream libraries
 
 ### Example Error
 
@@ -110,7 +110,7 @@ systemctl status jellyfin
 - **Error:** Stack overflow → SIGABRT
 
 ### After Fix
-- **Successful scan:** 10,267 series, 253,880 episodes
+- **Successful scan:** 10,276 series, 286,428 episodes
 - **No crashes:** Stack size sufficient for deep recursion
 - **Scan time:** 2-6 hours (depending on CPU)
 
@@ -154,11 +154,10 @@ curl -s "http://localhost:8096/Items?IncludeItemTypes=Series&Recursive=true&Limi
 ## Alternative Solutions Considered
 
 ### 1. Split into Multiple Libraries ❌
-**Reason:** User wanted single unified library
+**Reason:** Single SerienStream library is preferred
 
 ### 2. Downgrade Jellyfin Version ❌
-**Tested:** 10.9.10, 10.10.7
-**Result:** All versions have same issue (architectural limitation)
+**Result:** Same architectural limitation
 
 ### 3. Reduce Library Size ❌
 **Reason:** Defeats purpose of comprehensive media server
@@ -169,8 +168,7 @@ curl -s "http://localhost:8096/Items?IncludeItemTypes=Series&Recursive=true&Limi
 **Outcome:** Stack size increase is simpler and works
 
 ### 5. Stack Size to 2MB ❌
-**Tested:** Still crashed with 8,000+ series
-**Result:** 8MB is minimum for 10,000+ series
+**Result:** Still crashed with 8,000+ series
 
 ## Recommendations
 
@@ -307,5 +305,5 @@ Tested and confirmed working on:
 
 ---
 
-*Last Updated: November 2024*
-*Tested with: 10,267 series, 253,880 episodes*
+*Last Updated: March 2026*
+*Tested with: 10,276 series, 286,428 episodes*

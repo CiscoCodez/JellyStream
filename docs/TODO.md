@@ -5,60 +5,54 @@
 ### Completed Features ✅
 
 #### Core Infrastructure
-- [x] Series catalog scraper (10,267 series)
+- [x] Series catalog scraper (10,276 series)
 - [x] Season/episode structure scraper
-- [x] Stream URL scraper (multiple languages & providers)
-- [x] JSON database structurer (162MB database)
+- [x] Stream URL scraper (English-only export)
+- [x] JSON database structurer
 - [x] Database updater (incremental updates)
 - [x] Jellyfin folder structure generator
 - [x] Streaming API with Flask
 - [x] VOE provider integration
 - [x] HLS stream caching (1 hour TTL)
-- [x] Systemd service for API
+- [x] Systemd service support for API
 - [x] Jellyfin stack overflow fix (8MB thread stack)
+- [x] Jellyfin plugin for in-app updates
 
 #### Data Collection
-- [x] **10,267 series** indexed
-- [x] **253,880 episodes** scraped
-- [x] **1,603 movies** scraped
-- [x] **358,098 stream redirects** cataloged
-- [x] Multi-language support (German, English, German subs)
+- [x] **10,276 series** indexed
+- [x] **286,428 episodes** scraped
+- [x] **1,751 movies** scraped
+- [x] **67,685 English stream redirects** cataloged
+- [x] English-only export pipeline
 - [x] Multiple hosting providers per episode
 
 #### Jellyfin Integration
 - [x] .strm file generation
-- [x] Language prioritization (German → English → German subs)
+- [x] Language prioritization (English only)
 - [x] Large library support (10,000+ series without crash)
 - [x] Automated folder structure
+- [x] Plugin-based series search and update
 
 ---
 
-#### Multi-Site Platform (November 2024)
-- [x] **Project restructure** - Site-specific directories
-- [x] **Multi-site API** - Auto-loads all site databases
-- [x] **Aniworld structure** - Ready for anime scraping
-- [x] **Documentation update** - Multi-site architecture guide
+#### Project Consolidation (March 2026)
+- [x] **Single-site architecture** - SerienStream only
+- [x] **API cleanup** - SerienStream-only data loading
+- [x] **Plugin cleanup** - SerienStream-only search/update flow
+- [x] **Documentation cleanup** - Markdown aligned with current architecture
 
 ---
 
 ## In Progress 🚧
 
-### Aniworld Integration (Anime)
-**Status:** Structure ready, needs HTML selector adaptation
+### Deployment Hardening
+**Status:** Core functionality is stable, deployment polish is ongoing
 
-**Completed:**
-- [x] Site structure cloned from serienstream
-- [x] Config updated with anime-specific settings
-- [x] Languages: Deutsch, German Sub, English Sub
-- [x] Providers: VOE, Filemoon, Vidmoly
-
-**Remaining:**
-- [ ] Adapt HTML selectors in scrapers 1-3 for aniworld.to
-- [ ] Test scraping with small sample (--limit 5)
-- [ ] Create Filemoon provider (api/providers/filemoon.py)
-- [ ] Create Vidmoly provider (api/providers/vidmoly.py)
-- [ ] Full scrape and database generation
-- [ ] Generate Jellyfin structure
+**Active Work:**
+- [ ] Finalize production deployment checklist
+- [ ] Standardize VPS paths and service names
+- [ ] Review plugin repository metadata before release
+- [ ] Validate clean install on a fresh Jellyfin VPS
 
 **Priority:** High
 
@@ -68,72 +62,11 @@
 
 ### High Priority
 
-#### FlareSolverr Integration (Future/If Needed)
-**Status:** Removed for now - not needed as direct requests work
-
-**If Cloudflare blocking occurs in future:**
-- [ ] Re-implement FlareSolverr client library
-- [ ] Add smart request handler with automatic fallback
-- [ ] Integrate into scrapers 1-3
-- [ ] Add fallback to api/redirector.py
-
-**Priority:** Low (only if sites start blocking)
-
-#### 1. Complete Aniworld Integration
-**Goal:** Add anime streaming support from Aniworld (aniworld.to)
+#### 1. Automatic Database Updates
+**Goal:** Keep the SerienStream database fresh with daily or weekly updates
 
 **Tasks:**
-- [x] Clone serienstream structure to sites/aniworld
-- [x] Update config for anime-specific settings
-- [ ] Adapt HTML selectors for aniworld.to
-  - Update `1_catalog_scraper.py`
-  - Update `2_url_season_episode_num.py`
-  - Update `3_language_streamurl.py`
-- [ ] Create provider modules
-  - `api/providers/filemoon.py`
-  - `api/providers/vidmoly.py`
-- [ ] Test scraping with small sample
-- [ ] Full database scrape
-- [ ] Generate Jellyfin library structure
-
-**Benefits:**
-- Unified platform for series + anime
-- Leverage existing infrastructure
-- API already supports multi-site
-
-**Estimated Effort:** 1-2 weeks (structure done, just need scraping)
-
----
-
-#### 2. Multi-Provider Support
-**Goal:** Support additional hosting providers beyond VOE
-
-**Providers to Add:**
-- [ ] Streamtape
-- [ ] Vidoza
-- [ ] Doodstream
-- [ ] Upstream
-
-**Tasks:**
-- [ ] Create provider modules for each
-- [ ] Add provider fallback logic (try VOE → Streamtape → Vidoza)
-- [ ] Test stream quality and reliability
-- [ ] Add provider preference to config
-
-**Benefits:**
-- Better reliability (fallback if one provider is down)
-- Faster streams (can choose fastest provider)
-- Less dependence on single provider
-
-**Estimated Effort:** 1-2 weeks
-
----
-
-#### 3. Automatic Database Updates
-**Goal:** Keep database fresh with daily/weekly updates
-
-**Tasks:**
-- [ ] Create cron job for `5_updater.py`
+- [ ] Create cron job or systemd timer for `5_updater.py`
 - [ ] Add change detection (new episodes, new series)
 - [ ] Implement incremental Jellyfin updates
   - Only regenerate changed series
@@ -148,6 +81,43 @@
 - Monthly: Cleanup dead links
 
 **Estimated Effort:** 1 week
+
+---
+
+#### 2. Multi-Provider Support
+**Goal:** Improve reliability with stronger provider fallback beyond the current VOE-focused flow
+
+**Providers to Improve:**
+- [ ] Streamtape
+- [ ] Vidoza
+- [ ] Doodstream
+- [ ] Upstream
+
+**Tasks:**
+- [ ] Expand provider modules
+- [ ] Add provider fallback logic
+- [ ] Test stream quality and reliability
+- [ ] Add provider preference to config
+
+**Benefits:**
+- Better reliability (fallback if one provider is down)
+- Faster streams (can choose fastest provider)
+- Less dependence on single provider path
+
+**Estimated Effort:** 1-2 weeks
+
+---
+
+#### 3. FlareSolverr Integration (Future/If Needed)
+**Status:** Removed for now - not needed as direct requests work
+
+**If Cloudflare blocking occurs in future:**
+- [ ] Re-implement FlareSolverr client library
+- [ ] Add smart request handler with automatic fallback
+- [ ] Integrate into scrapers 1-3
+- [ ] Add fallback to api/redirector.py
+
+**Priority:** Low (only if site starts blocking)
 
 ---
 
@@ -229,7 +199,7 @@
 ---
 
 #### 9. Mobile App (Future)
-**Goal:** Native mobile app for browsing/streaming
+**Goal:** Native mobile app for browsing or streaming
 
 **Features:**
 - Browse series catalog
@@ -294,45 +264,47 @@ Have a feature idea? Add it here!
 ### v1.1 - Jellyfin Integration (November 2024)
 - ✅ Jellyfin structure generator
 - ✅ Streaming API
-- ✅ 10,267 series support
+- ✅ 10,000+ series support
 - ✅ Stack overflow fix for large libraries
 
-### v1.2 - FlareSolverr (Current)
-- ✅ FlareSolverr infrastructure
-- 🚧 Full scraper integration (in progress)
+### v1.2 - SerienStream Consolidation (March 2026)
+- ✅ SerienStream-only architecture
+- ✅ English-only export pipeline
+- ✅ Plugin cleanup
+- ✅ Documentation refresh
 
 ---
 
-## Next Release: v1.3 - Aniworld Integration (Q1 2025)
+## Next Release: v1.3 - Deployment & Automation (2026)
 
-**Target Date:** January 2025
+**Target Date:** TBD
 
 **Goals:**
-- [ ] Aniworld scraper complete
-- [ ] Anime Jellyfin library
-- [ ] Combined series + anime database
-- [ ] Multi-provider fallback
+- [ ] Production deployment guide finalized
+- [ ] Automated update workflow
+- [ ] Cleaner release packaging
+- [ ] Broader provider fallback
 
 ---
 
 ## Long-term Vision 🚀
 
-**Year 1 (2025):**
-- Complete Aniworld integration
-- Add 3-4 additional providers
+**Year 1:**
+- Improve deployment reliability
+- Add provider fallback improvements
 - Build web dashboard
 - Implement automatic updates
 
-**Year 2 (2026):**
+**Year 2:**
 - Mobile app development
-- Multi-site support (additional streaming sites)
 - Advanced features (subtitles, quality selection)
 - Community features (watchlists, ratings)
+- Optional expansion beyond SerienStream if needed
 
 **Ultimate Goal:**
-- Unified streaming platform for German content
-- Self-hosted Netflix-like experience
-- Support for series, anime, movies, documentaries
+- Unified self-hosted streaming platform for SerienStream content
+- Smooth Jellyfin integration
+- Reliable updates and playback
 - High reliability and performance
 
 ---
@@ -342,11 +314,11 @@ Have a feature idea? Add it here!
 Want to help? Pick a task from the TODO list and get started!
 
 **Priority order:**
-1. Aniworld Integration (high impact)
+1. Automatic Updates (maintenance)
 2. Multi-Provider Support (reliability)
-3. Automatic Updates (maintenance)
+3. Deployment Hardening (operations)
 4. Web Dashboard (UX improvement)
 
 ---
 
-*Last Updated: November 2024*
+*Last Updated: March 2026*

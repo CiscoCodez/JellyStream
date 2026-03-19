@@ -1,15 +1,15 @@
 # JellyStream Plugin
 
-A Jellyfin plugin for searching and updating series from Aniworld and SerienStream.
+A Jellyfin plugin for searching and updating SerienStream series.
 
 ## Features
 
-- 🔍 Search for series from Aniworld and SerienStream
+- 🔍 Search for SerienStream series
 - 🔄 Update individual series with latest episodes
 - 📊 Real-time log streaming during updates
 - ⚡ Live progress updates in the UI
 - 🎯 Simple and clean interface
-- **Dual Site Support**: Works with both Aniworld and SerienStream
+- **English-Only Workflow**: Matches the SerienStream English-dub pipeline
 
 ## Building the Plugin
 
@@ -55,10 +55,9 @@ After installation, go to Jellyfin Dashboard → Plugins → JellyStream:
 ## Usage
 
 1. Navigate to Plugins → JellyStream
-2. Select site (Aniworld or SerienStream)
-3. Enter series name and click Search
-4. Click Update on any series to update it
-5. Watch the live logs as the update progresses
+2. Enter series name and click Search
+3. Click Update on any series to update it
+4. Watch the live logs as the update progresses
 
 ## How It Works
 
@@ -73,23 +72,23 @@ Jellyfin UI → Plugin API → manual_updater.py → Database + .strm files
 ### Update Flow
 
 1. User searches for series in Jellyfin plugin UI
-2. Plugin calls: `python3 manual_updater.py --plugin --site X --search "query"`
+2. Plugin calls: `python3 manual_updater.py --plugin --site serienstream --search "query"`
 3. User clicks "Update" on a series
-4. Plugin calls: `python3 manual_updater.py --plugin --site X --series-name "Name" --json`
+4. Plugin calls: `python3 manual_updater.py --plugin --site serienstream --series-name "Name" --json`
 5. `manual_updater.py` handles everything:
    - Runs Python scraper scripts (2, 3, 4)
    - Updates database
    - Regenerates .strm files
    - Returns JSON result
-6. Plugin parses JSON and shows result in UI
+6. Plugin parses JSON and shows result
 
 ### Files
 
 - **Plugin**: `/var/lib/jellyfin/plugins/JellyStream_1.0.0.0/` (C#)
 - **Script**: `/opt/JellyStream/utils/manual_updater.py` (Python)
-- **Scrapers**: `/opt/JellyStream/sites/{site}/` (Python)
-- **Database**: `/opt/JellyStream/sites/{site}/data/final_series_data.json`
-- **Media**: `/media/jellyfin/{site}/` (.strm files)
+- **Scrapers**: `/opt/JellyStream/sites/serienstream/` (Python)
+- **Database**: `/opt/JellyStream/sites/serienstream/data/final_series_data.json`
+- **Media**: `/media/jellyfin/serienstream/` (.strm files)
 
 ## Development
 
@@ -111,11 +110,11 @@ JellyStream/
 
 ### API Endpoints
 
-- `GET /JellyStream/Series/Search?site={site}&query={text}` - Search for series
-- `POST /JellyStream/Update/Series?name={name}&site={site}` - Update a series
+- `GET /JellyStream/Series/Search?site=serienstream&query={text}` - Search for series
+- `POST /JellyStream/Update/Series?name={name}&site=serienstream` - Update a series
 - `GET /JellyStream/Update/Logs?key={logKey}` - Get live update logs
 
-Both update endpoints call `manual_updater.py` with appropriate flags.
+Both update endpoints call `manual_updater.py` with SerienStream-specific flags.
 
 ## Requirements
 
@@ -132,7 +131,7 @@ Both update endpoints call `manual_updater.py` with appropriate flags.
 
 **Update fails:**
 - Check that the script path is correct in plugin settings
-- Verify network connectivity to aniworld.to / serienstream.to
+- Verify network connectivity to serienstream.to
 - Check Jellyfin logs for detailed error messages
 - Watch the live logs in the UI for specific errors
 

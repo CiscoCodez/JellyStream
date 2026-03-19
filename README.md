@@ -1,69 +1,63 @@
 # JellyStream
 
-A unified platform for streaming German series and anime through Jellyfin, with automated scraping, multi-site support, and a streaming API backend.
+A unified platform for streaming SerienStream content through Jellyfin, with automated scraping, English-dub filtering, and a streaming API backend.
 
 ## Overview
 
-JellyStream scrapes German streaming sites (SerienStream and Aniworld) for TV series and anime metadata, generates Jellyfin-compatible folder structures with .strm files, and provides a streaming API to serve the content.
+JellyStream scrapes SerienStream for TV series metadata, filters the database to English-dubbed streams only, generates Jellyfin-compatible folder structures with .strm files, and provides a streaming API to serve the content.
 
 ### Current Status
 
 **SerienStream** (Series): ✅ Implemented
 - **10,276 series** indexed
-- **253,972 episodes** + **1,603 movies**
+- **286,428 episodes** + **1,751 movies**
+- **67,685 English stream redirects** cataloged
 - **Providers:** VOE, Vidoza, Doodstream
-- **Languages:** German, English, German Subs
-
-**Aniworld** (Anime): ✅ Implemented
-- **2,279 series** indexed
-- **26,795 episodes** + **695 movies**
-- **Providers:** VOE, Vidoza
-- **Languages:** German (dub), German Sub, English Sub
+- **Languages:** English only
 
 **FlareSolverr Integration**: 🚧 In Progress
 - Cloudflare bypass for protected sites
-- Currently being integrated for future-proofing
+- Currently being evaluated for future-proofing
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│          Source Sites (SerienStream, Aniworld)              │
-│          serienstream.to  |  aniworld.to                    │
+│                    Source Site                              │
+│                    serienstream.to                          │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
-│         Site-Specific Scraping Pipelines                    │
-│  sites/serienstream/        sites/aniworld/                 │
-│  1. Catalog Scraper         1. Catalog Scraper              │
-│  2. Season/Episode          2. Season/Episode               │
-│  3. Language/Streams        3. Language/Streams             │
-│  4. JSON Structurer         4. JSON Structurer              │
-│  → final_series_data.json   → final_anime_data.json         │
+│              SerienStream Scraping Pipeline                 │
+│  sites/serienstream/                                        │
+│  1. Catalog Scraper                                         │
+│  2. Season/Episode                                          │
+│  3. Language/Streams                                        │
+│  4. JSON Structurer                                         │
+│  → final_series_data.json                                   │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
-│              Jellyfin Structure Generators                  │
-│  - Creates folder hierarchy per site                        │
-│  - Generates .strm files with site-prefixed IDs             │
-│  - Language prioritization per site                         │
+│              Jellyfin Structure Generator                   │
+│  - Creates folder hierarchy for SerienStream                │
+│  - Generates .strm files with redirect IDs                  │
+│  - Uses English-only language priority                      │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
-│              Unified Streaming API                          │
-│  - Flask-based multi-site API                               │
-│  - Loads all site databases                                 │
-│  - Multi-provider support (VOE, Vidoza, Filemoon, Vidmoly)  │
+│                   Streaming API                             │
+│  - Flask-based API                                          │
+│  - Loads SerienStream database                              │
+│  - VOE-focused extraction with redirect fallback            │
 │  - HLS stream caching (1 hour)                              │
-│  - Running on: http://192.168.1.153:3000                    │
+│  - Default endpoint: http://localhost:3000                  │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │                    Jellyfin Server                          │
-│  - Multiple libraries (Series, Anime)                       │
-│  - Plays .strm files via unified API                        │
-│  - Running on: http://192.168.1.161:8096                    │
-│  - Stack fix applied for large libraries (8MB thread stack) │
+│  - Single SerienStream library                              │
+│  - Plays .strm files via local API                          │
+│  - Stack fix available for large libraries                  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -72,34 +66,27 @@ JellyStream scrapes German streaming sites (SerienStream and Aniworld) for TV se
 ```
 JellyStream/
 ├── README.md                  # This file
-├── SETUP.md                   # Detailed setup guide and troubleshooting
 │
 ├── sites/                     # Site-specific scrapers
-│   ├── serienstream/          # German series (10,276 series)
-│   │   ├── 1_catalog_scraper.py
-│   │   ├── 2_url_season_episode_num.py
-│   │   ├── 3_language_streamurl.py
-│   │   ├── 4_json_structurer.py
-│   │   ├── 5_updater.py
-│   │   ├── 6_main.py
-│   │   ├── 7_jellyfin_structurer.py
-│   │   ├── config.py         # Site-specific config
-│   │   └── data/
-│   │       └── final_series_data.json (162MB - not in git)
-│   │
-│   └── aniworld/             # Anime (2,279 series)
-│       ├── 1-7_*.py          # Same pipeline structure
-│       ├── config.py
+│   └── serienstream/          # SerienStream pipeline
+│       ├── 1_catalog_scraper.py
+│       ├── 2_url_season_episode_num.py
+│       ├── 3_language_streamurl.py
+│       ├── 4_json_structurer.py
+│       ├── 5_updater.py
+│       ├── 6_main.py
+│       ├── 7_jellyfin_structurer.py
+│       ├── config.py         # Site-specific config
 │       └── data/
-│           └── final_series_data.json (75MB - not in git)
+│           └── final_series_data.json
 │
-├── api/                      # Unified streaming API
-│   ├── main.py              # Flask server (multi-site support)
-│   ├── data_loader.py       # Multi-database loader
+├── api/                      # Streaming API
+│   ├── main.py              # Flask server
+│   ├── data_loader.py       # SerienStream data loader
 │   ├── redirector.py        # Redirect resolver
 │   ├── providers/           # Streaming providers
-│   │   ├── voe.py          # VOE (both sites)
-│   │   └── vidoza.py       # Vidoza (both sites)
+│   │   ├── voe.py          # VOE extractor
+│   │   └── vidoza.py       # Vidoza helper
 │   └── downloader/
 │       └── voe_dl.py       # VOE direct downloader
 │
@@ -112,37 +99,39 @@ JellyStream/
 │       ├── Configuration/  # Plugin settings and web UI
 │       └── README.md       # Plugin documentation
 │
-├── backup/                  # Database backups (not in git)
+├── tools/                   # Local maintenance helpers
+│   └── filter_serienstream_english.py
 │
 └── docs/                    # Documentation
     ├── TODO.md             # Project roadmap
-    └── JELLYFIN_STACK_FIX.md  # Fix for large libraries
+    ├── JELLYFIN_METADATA_CLEANUP.md
+    └── JELLYFIN_STACK_FIX.md
 ```
 
 ## Components
 
-### 1. Site-Specific Scrapers
+### 1. SerienStream Scrapers
 
-Each site in `sites/<sitename>/` follows the same pipeline:
+The SerienStream pipeline in `sites/serienstream/` follows this flow:
 
 1. **1_catalog_scraper.py** - Scrapes catalog (name, URL, year)
 2. **2_url_season_episode_num.py** - Gets season/episode structure
-3. **3_language_streamurl.py** - Fetches stream URLs per episode/language
+3. **3_language_streamurl.py** - Fetches stream URLs and keeps English streams only
 4. **4_json_structurer.py** - Combines into final database
 5. **5_updater.py** - Updates database with new content
 6. **6_main.py** - Runs full pipeline
 7. **7_jellyfin_structurer.py** - Generates Jellyfin folder structure
 
-**Site Configs:**
-- `config.py` - Site-specific settings (URL, languages, providers, paths)
+**Site Config:**
+- `config.py` - SerienStream settings (URL, language priority, providers, paths)
 
-### 2. Unified Streaming API
+### 2. Streaming API
 
 Located in `api/`:
 
 **Core Files:**
-- `main.py` - Flask API server with multi-site support
-- `data_loader.py` - Loads all site databases
+- `main.py` - Flask API server
+- `data_loader.py` - Loads SerienStream database
 - `redirector.py` - Resolves stream redirects
 - `providers/*.py` - Provider-specific stream extractors
 
@@ -154,21 +143,16 @@ Located in `api/`:
 - `GET /test/<id>` - Test redirect resolution
 - `GET /clear-cache` - Clear stream cache
 
-**Multi-Site Support:**
-- Automatically loads all `final_*_data.json` files from site directories
-- Routes redirects to appropriate site based on ID
-- Shared provider pool across all sites
+**Behavior:**
+- Loads SerienStream data only
+- Uses English-only redirect selection for season caching
+- Serves redirects from `serienstream.to`
 
 ### 3. Jellyfin Integration
 
 **SerienStream Library:**
 - Media directory: `/media/jellyfin/serienstream/`
 - Structure: `Series Name (Year)/Season XX/Episode.strm`
-- .strm files point to: `http://localhost:3000/stream/redirect/[id]`
-
-**Aniworld Library:**
-- Media directory: `/media/jellyfin/aniworld/`
-- Structure: `Anime Name (Year)/Season XX/Episode.strm`
 - .strm files point to: `http://localhost:3000/stream/redirect/[id]`
 
 **Stack Overflow Fix:**
@@ -190,10 +174,10 @@ See [docs/JELLYFIN_STACK_FIX.md](docs/JELLYFIN_STACK_FIX.md) for details.
 
 ### 4. Jellyfin Plugin (Optional)
 
-A native Jellyfin plugin is available for updating series directly from the Jellyfin UI without using the command line.
+A native Jellyfin plugin is available for updating SerienStream series directly from the Jellyfin UI without using the command line.
 
 **Features:**
-- 🔍 Search series from Aniworld and SerienStream
+- 🔍 Search SerienStream series
 - 🔄 Update individual series with latest episodes
 - 📊 Real-time log streaming during updates
 - 🔒 Secure (requires admin authentication)
@@ -214,7 +198,7 @@ See [plugin/README.md](plugin/README.md) for detailed documentation, manual inst
 
 - Python 3.11+
 - Jellyfin server
-- 200MB+ disk space for databases
+- 200MB+ disk space for database files
 
 ### 1. Install Dependencies
 
@@ -222,7 +206,7 @@ See [plugin/README.md](plugin/README.md) for detailed documentation, manual inst
 pip3 install flask requests beautifulsoup4
 ```
 
-### 2. Run Scrapers (SerienStream Example)
+### 2. Run Scrapers
 
 ```bash
 cd sites/serienstream
@@ -230,7 +214,7 @@ cd sites/serienstream
 # Test with small sample
 python3 6_main.py --limit 10
 
-# Full scrape (takes several hours)
+# Full scrape
 python3 6_main.py
 ```
 
@@ -238,7 +222,7 @@ python3 6_main.py
 
 ```bash
 cd sites/serienstream
-python3 7_jellyfin_structurer.py --api-url http://192.168.1.153:3000/stream/redirect
+python3 7_jellyfin_structurer.py --api-url http://localhost:3000/stream/redirect
 ```
 
 ### 4. Start Streaming API
@@ -253,7 +237,7 @@ python3 main.py
 
 ### 5. Add Library to Jellyfin
 
-1. Open Jellyfin: `http://192.168.1.161:8096`
+1. Open Jellyfin
 2. Go to: Dashboard → Libraries → Add Library
 3. Content type: TV Shows
 4. Folder: `/media/jellyfin/serienstream`
@@ -278,13 +262,13 @@ python3 6_main.py
 
 ```bash
 # Check API health
-curl http://192.168.1.153:3000/health
+curl http://localhost:3000/health
 
 # View statistics
-curl http://192.168.1.153:3000/stats
+curl http://localhost:3000/stats
 
 # Test specific redirect
-curl http://192.168.1.153:3000/test/<redirect_id>
+curl http://localhost:3000/test/<redirect_id>
 ```
 
 ## Deployment (Production)
@@ -292,21 +276,21 @@ curl http://192.168.1.153:3000/test/<redirect_id>
 ### Deploy API as Systemd Service
 
 ```bash
-# Copy API to /opt
-sudo cp -r api /opt/streaming-api
+# Copy project to /opt
+sudo cp -r /path/to/JellyStream /opt/JellyStream
 
 # Create systemd service
-sudo cat > /etc/systemd/system/streaming-api.service << 'EOF'
+sudo cat > /etc/systemd/system/jellystream-api.service << 'EOF'
 [Unit]
-Description=Multi-Site Streaming API
+Description=JellyStream API
 After=network.target
 
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/streaming-api
+WorkingDirectory=/opt/JellyStream/api
 Environment="PYTHONUNBUFFERED=1"
-ExecStart=/usr/bin/python3 /opt/streaming-api/main.py
+ExecStart=/usr/bin/python3 /opt/JellyStream/api/main.py
 Restart=always
 RestartSec=10
 
@@ -316,39 +300,16 @@ EOF
 
 # Enable and start
 sudo systemctl daemon-reload
-sudo systemctl enable streaming-api
-sudo systemctl start streaming-api
-sudo systemctl status streaming-api
-```
-
-## Adding New Sites
-
-To add a new site (e.g., `aniworld`):
-
-```bash
-# 1. Clone serienstream structure
-cp -r sites/serienstream sites/aniworld
-
-# 2. Update config.py
-cd sites/aniworld
-nano config.py  # Change SITE_NAME, BASE_URL, language/provider priorities
-
-# 3. Adapt scrapers to new site's HTML structure
-# Modify selectors in 1_catalog_scraper.py, 2_*.py, 3_*.py as needed
-
-# 4. Run pipeline
-python3 6_main.py --limit 10  # Test first
-
-# 5. API will auto-detect new database
-cd ../../api
-python3 main.py  # Loads both serienstream + aniworld databases
+sudo systemctl enable jellystream-api
+sudo systemctl start jellystream-api
+sudo systemctl status jellystream-api
 ```
 
 ## Data Structure
 
-### Site Database Format
+### SerienStream Database Format
 
-Each site produces a `final_*_data.json` file:
+The pipeline produces a `final_series_data.json` file:
 
 ```json
 {
@@ -356,16 +317,16 @@ Each site produces a `final_*_data.json` file:
     {
       "name": "Series Name",
       "jellyfin_name": "Series Name (2020)",
-      "url": "https://site.to/serie/stream/...",
+      "url": "https://serienstream.to/serie/stream/...",
       "seasons": {
         "season_1": {
           "episodes": {
             "episode_1": {
               "streams_by_language": {
-                "Deutsch": [
+                "Englisch": [
                   {
                     "provider": "VOE",
-                    "stream_url": "https://site.to/redirect/xyz123"
+                    "stream_url": "https://serienstream.to/redirect/xyz123"
                   }
                 ]
               }
@@ -381,27 +342,18 @@ Each site produces a `final_*_data.json` file:
 ### Language Priority
 
 **SerienStream:**
-1. Deutsch (German audio)
-2. Englisch (English audio)
-3. mit deutschen Untertiteln (German subs)
-
-**Aniworld:**
-1. Deutsch (German dub)
-2. German Sub (German subs)
-3. English Sub (English subs)
+1. Englisch (English audio)
 
 ### Provider Priority
 
 **SerienStream:** VOE → Vidoza → Doodstream
-
-**Aniworld:** VOE → Filemoon → Vidmoly
 
 ## Performance
 
 ### Scraping
 - **Catalog:** ~2-3 requests/sec
 - **Episodes:** ~1-2 requests/sec
-- **Full scrape (10K series):** 8-12 hours
+- **Full scrape (10K series):** several hours
 
 ### API
 - **Direct redirects:** <100ms
@@ -417,8 +369,8 @@ Each site produces a `final_*_data.json` file:
 ### API Won't Start
 
 ```bash
-# Check if data files exist
-ls sites/*/data/final_*.json
+# Check if data file exists
+ls sites/serienstream/data/final_series_data.json
 
 # Test data loader manually
 cd api
@@ -443,13 +395,13 @@ Apply stack fix (see Quick Start section 3 or [docs/JELLYFIN_STACK_FIX.md](docs/
 
 ```bash
 # Verify API is running
-curl http://192.168.1.153:3000/health
+curl http://localhost:3000/health
 
 # Test specific redirect
-curl http://192.168.1.153:3000/test/<redirect_id>
+curl http://localhost:3000/test/<redirect_id>
 
 # Check API logs
-tail -f api/logs/streaming_api.log
+tail -f api/streaming_api.log
 ```
 
 ## Future Plans
@@ -457,12 +409,12 @@ tail -f api/logs/streaming_api.log
 See [docs/TODO.md](docs/TODO.md) for detailed roadmap.
 
 **In Progress:**
-- FlareSolverr integration for Cloudflare bypass
-- Jellyfin LXC rebuild with proper localhost configuration
+- FlareSolverr evaluation for Cloudflare bypass
+- Deployment hardening for VPS/Jellyfin environments
 
 **Planned:**
-- Additional providers (Filemoon, Vidmoly, Streamtape)
-- Automatic daily updates (cron jobs)
+- Additional provider support
+- Automatic daily updates
 - Web dashboard for monitoring
 - Stream health checking and auto-updates
 
