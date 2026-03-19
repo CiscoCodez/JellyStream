@@ -5,6 +5,15 @@ from urllib.parse import urlparse, urljoin
 
 logger = logging.getLogger(__name__)
 
+VOE_DOMAINS = [
+    'voe.sx',
+    'voe.to',
+    'voe.cx',
+    'jilliandescribecompany.com',
+    'mikaylaarealike.com',
+    'dianaavoidthey.com',
+]
+
 class RedirectResolver:
     def __init__(self):
         self.session = requests.Session()
@@ -19,7 +28,7 @@ class RedirectResolver:
     
     def resolve_redirect(self, serienstream_url):
         """
-        Resolve serienstream.to redirect URL to final provider URL
+        Resolve a SerienStream play URL to the final provider URL
         Handles both HTTP redirects and JavaScript redirects
         """
         logger.info(f"Resolving redirect: {serienstream_url}")
@@ -49,6 +58,10 @@ class RedirectResolver:
                 
                 # Handle successful response
                 elif response.status_code == 200:
+                    if self._is_challenge_page(response.text):
+                        logger.warning("Encountered Turnstile challenge page while resolving stream URL")
+                        return None
+
                     # Check for JavaScript redirects in the content
                     js_redirect = self._extract_js_redirect(response.text)
                     if js_redirect:
@@ -93,6 +106,18 @@ class RedirectResolver:
                     return redirect_url
         
         return None
+
+    def _is_challenge_page(self, html_content):
+        """Detect the Turnstile gate shown before provider redirects."""
+        challenge_markers = [
+            'cf-turnstile',
+            'challenges.cloudflare.com/turnstile',
+            'Bitte l',
+            'captcha-form',
+            'Stream wird vorbereitet'
+        ]
+        lowered = html_content.lower()
+        return any(marker.lower() in lowered for marker in challenge_markers)
     
     def _is_valid_provider_url(self, url):
         """Check if URL is from a supported provider"""
@@ -104,8 +129,7 @@ class RedirectResolver:
             
             # Known provider domains
             provider_domains = [
-                'voe.sx', 'voe.to', 'voe.cx',
-                'jilliandescribecompany.com',  # VOE redirect domain
+                *VOE_DOMAINS,
                 'doodstream.com', 'dood.to', 'dood.ws', 'dood.li', 'doply.net',  # Doodstream domains
                 'vidoza.net', 'videzz.net',  # Vidoza domains
             ]
@@ -123,7 +147,7 @@ class RedirectResolver:
         try:
             domain = urlparse(url).netloc.lower()
             
-            if any(voe in domain for voe in ['voe.sx', 'voe.to', 'voe.cx', 'jilliandescribecompany.com', 'mikaylaarealike.com']):
+            if any(voe in domain for voe in VOE_DOMAINS):
                 return 'voe'
             elif any(dood in domain for dood in ['doodstream.com', 'dood.to', 'dood.ws', 'dood.li', 'doply.net']):
                 return 'doodstream'

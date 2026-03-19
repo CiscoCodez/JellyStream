@@ -12,6 +12,7 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import time
+import re
 from typing import Dict, List, Optional
 from urllib.parse import urljoin
 from pathlib import Path
@@ -49,11 +50,11 @@ class SeriesStructureAnalyzer:
         return None
 
     def normalize_series_url(self, url: str) -> str:
-        """Ensure all series URLs use the /serie/stream/ pattern."""
+        """Normalize to the canonical /serie/<slug> pattern used by the site."""
         if '/serie/stream/' in url:
-            return url.rstrip('/')
+            return url.replace('/serie/stream/', '/serie/', 1).rstrip('/')
         if '/serie/' in url:
-            return url.replace('/serie/', '/serie/stream/', 1).rstrip('/')
+            return url.rstrip('/')
         return url.rstrip('/')
     
     def load_series_data(self) -> List[Dict]:
@@ -147,10 +148,15 @@ class SeriesStructureAnalyzer:
             return []
 
         season_numbers = []
-        for link in seasons_ul.find_all('a', href=True):
-            text = link.get_text(strip=True)
+        for item in seasons_ul.find_all(['li', 'a', 'span']):
+            text = item.get_text(strip=True)
             if text.isdigit():
                 season_numbers.append(int(text))
+
+        if not season_numbers:
+            text = seasons_ul.get_text(" ", strip=True)
+            for match in re.findall(r'\b\d+\b', text):
+                season_numbers.append(int(match))
 
         return sorted(set(season_numbers))
 
@@ -161,28 +167,16 @@ class SeriesStructureAnalyzer:
         if not soup:
             return []
 
-        table = soup.find('table')
-        if not table:
-            return []
-
         endpoints = []
         seen = set()
+        season_path_fragment = f"/staffel-{season_num}/episode-"
 
-        for row in table.find_all('tr'):
-            if row.find('th'):
-                continue
-
-            link = row.find('a', href=True)
-            if not link:
-                continue
-
+        for link in soup.find_all('a', href=True):
             href = link.get('href', '')
-            if '/episode-' not in href:
+            if season_path_fragment not in href:
                 continue
 
             endpoint = urljoin(config.BASE_URL, href)
-            if '/serie/stream/' not in endpoint and '/serie/' in endpoint:
-                endpoint = endpoint.replace('/serie/', '/serie/stream/', 1)
 
             if endpoint not in seen:
                 seen.add(endpoint)

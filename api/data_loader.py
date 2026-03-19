@@ -87,10 +87,8 @@ class DataLoader:
                     # Extract redirect IDs from streams
                     for language, streams in episode.get('streams_by_language', {}).items():
                         for stream in streams:
-                            stream_url = stream.get('stream_url', '')
-                            if '/redirect/' in stream_url:
-                                redirect_id = stream_url.split('/redirect/')[-1]
-
+                            redirect_id = self._extract_stream_id(stream)
+                            if redirect_id:
                                 self.redirect_lookup[redirect_id] = {
                                     'series_idx': series_idx,
                                     'series_name': series_name,
@@ -98,9 +96,22 @@ class DataLoader:
                                     'episode_num': episode_num,
                                     'language': language,
                                     'provider': stream.get('provider', ''),
+                                    'stream_url': stream.get('stream_url', ''),
                                     'source_site': source_site,
                                     'episode_data': episode
                                 }
+
+    def _extract_stream_id(self, stream: Dict) -> Optional[str]:
+        """Extract the stable stream identifier from a stream entry."""
+        stream_id = stream.get('stream_id')
+        if stream_id:
+            return str(stream_id)
+
+        stream_url = stream.get('stream_url', '')
+        if '/redirect/' in stream_url:
+            return stream_url.split('/redirect/')[-1]
+
+        return None
 
     def find_episode_by_redirect(self, redirect_id: str) -> Optional[Dict]:
         """Find episode info by redirect ID"""
@@ -124,15 +135,15 @@ class DataLoader:
                 provider = None
                 english_streams = episode.get('streams_by_language', {}).get('Englisch', [])
                 if english_streams:
-                    stream_url = english_streams[0].get('stream_url', '')
-                    if '/redirect/' in stream_url:
-                        redirect_id = stream_url.split('/redirect/')[-1]
+                    redirect_id = self._extract_stream_id(english_streams[0])
+                    if redirect_id:
                         provider = english_streams[0].get('provider', '')
 
                 if redirect_id:
                     episodes.append({
                         'episode_num': episode_num,
                         'redirect_id': redirect_id,
+                        'stream_url': english_streams[0].get('stream_url', ''),
                         'provider': provider,
                         'url': episode.get('url', '')
                     })

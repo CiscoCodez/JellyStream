@@ -7,6 +7,15 @@ from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
+VOE_DOMAINS = [
+    'voe.sx',
+    'voe.to',
+    'voe.cx',
+    'jilliandescribecompany.com',
+    'mikaylaarealike.com',
+    'dianaavoidthey.com',
+]
+
 class VOEProvider:
     def __init__(self):
         self.session = requests.Session()
@@ -164,5 +173,4 @@ class VOEProvider:
     
     def can_handle(self, url):
         """Check if this provider can handle the URL"""
-        voe_domains = ['voe.sx', 'voe.to', 'voe.cx', 'jilliandescribecompany.com', 'mikaylaarealike.com']
-        return any(domain in url.lower() for domain in voe_domains)
+        return any(domain in url.lower() for domain in VOE_DOMAINS)

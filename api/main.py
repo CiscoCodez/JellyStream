@@ -115,8 +115,11 @@ def _cache_season_background(season_episodes, skip_redirect_id, season_lock_key)
                 if not ep_info:
                     continue
 
-                redirect_url = f"https://serienstream.to/redirect/{redirect_id}"
-                provider_url = redirect_resolver.resolve_redirect(redirect_url)
+                stream_url = episode.get('stream_url')
+                if not stream_url:
+                    continue
+
+                provider_url = redirect_resolver.resolve_redirect(stream_url)
                 
                 if provider_url:
                     provider_type = redirect_resolver.get_provider_type(provider_url)
@@ -138,7 +141,7 @@ def _cache_season_background(season_episodes, skip_redirect_id, season_lock_key)
 
 @app.route('/stream/direct/<redirect_id>')
 def stream_direct(redirect_id):
-    """Direct redirect endpoint - sends 302 redirect to actual m3u8 URL for better Jellyfin compatibility"""
+    """Direct stream endpoint - sends 302 redirect to actual m3u8 URL for better Jellyfin compatibility"""
     try:
         logging.info(f"🎬 Direct stream request for redirect {redirect_id}")
 
@@ -155,12 +158,12 @@ def stream_direct(redirect_id):
             if not episode_info:
                 return jsonify({"error": f"Redirect ID {redirect_id} not found"}), 404
 
-            source_site = "serienstream"
-            redirect_url = f"https://serienstream.to/redirect/{redirect_id}"
-            provider_url = redirect_resolver.resolve_redirect(redirect_url)
+            source_site = episode_info.get('source_site', 'serienstream')
+            stream_url = episode_info.get('stream_url')
+            provider_url = redirect_resolver.resolve_redirect(stream_url)
 
             if not provider_url:
-                return jsonify({"error": "Failed to resolve redirect"}), 500
+                return jsonify({"error": "Failed to resolve stream URL"}), 500
 
             provider_type = redirect_resolver.get_provider_type(provider_url)
             logging.info(f"🎯 Provider: {provider_type}")
@@ -208,16 +211,16 @@ def stream_redirect(redirect_id):
                 logging.warning(f"❌ Redirect ID {redirect_id} not found in data")
                 return jsonify({'error': 'Redirect ID not found'}), 404
 
-            # Resolve redirect to get provider URL using correct source site
-            redirect_url = f"https://serienstream.to/redirect/{redirect_id}"
+            source_site = episode_info.get('source_site', 'serienstream')
+            stream_url = episode_info.get('stream_url')
             logging.info(f"🔍 Resolving {redirect_id} ({source_site}) for {episode_info['series_name']} S{episode_info['season_num']}E{episode_info['episode_num']}")
             
             # Step 1: Get the direct provider URL
-            provider_url = redirect_resolver.resolve_redirect(redirect_url)
+            provider_url = redirect_resolver.resolve_redirect(stream_url)
             
             if not provider_url:
                 logging.error(f"❌ Failed to resolve redirect {redirect_id}")
-                return jsonify({'error': 'Failed to resolve redirect'}), 503
+                return jsonify({'error': 'Failed to resolve stream URL'}), 503
             
             provider_type = redirect_resolver.get_provider_type(provider_url)
             logging.info(f"🔍 Provider detected: {provider_type} - URL: {provider_url}")
@@ -348,7 +351,7 @@ def test_redirect(redirect_id):
     try:
         # Get episode info to determine source site
         episode_info = data_loader.find_episode_by_redirect(redirect_id)
-        redirect_url = f"https://serienstream.to/redirect/{redirect_id}"
+        redirect_url = episode_info.get('stream_url')
         logging.info(f"🧪 Testing redirect resolution for {redirect_id} (serienstream)")
 
         # Step 1: Resolve redirect

@@ -167,21 +167,31 @@ class JellyfinStructureGenerator:
             for provider in ['VOE', 'Vidoza', 'Doodstream']:
                 for stream in language_streams:
                     if stream.get('provider') == provider:
-                        stream_url = stream.get('stream_url', '')
-                        if '/redirect/' in stream_url:
-                            redirect_id = stream_url.split('/redirect/')[-1]
+                        redirect_id = self.get_stream_id(stream)
+                        if redirect_id:
                             return redirect_id, language  # Return both redirect and which language was used
             
             # If no preferred provider, use any redirect from this language
             for stream in language_streams:
-                stream_url = stream.get('stream_url', '')
-                if '/redirect/' in stream_url:
-                    redirect_id = stream_url.split('/redirect/')[-1]
+                redirect_id = self.get_stream_id(stream)
+                if redirect_id:
                     return redirect_id, language
         
         # No streams found in any priority language
         available_languages = list(streams_by_language.keys())
         return None, available_languages
+
+    def get_stream_id(self, stream):
+        """Get a stable stream identifier from either legacy or current data."""
+        stream_id = stream.get('stream_id')
+        if stream_id:
+            return str(stream_id)
+
+        stream_url = stream.get('stream_url', '')
+        if '/redirect/' in stream_url:
+            return stream_url.split('/redirect/')[-1]
+
+        return None
     
     def create_strm_file(self, strm_path, redirect_id):
         """Create a .strm file"""

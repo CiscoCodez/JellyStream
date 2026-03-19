@@ -125,18 +125,26 @@ class EpisodeStreamsAnalyzer:
         
         try:
             lang_box = soup.find('div', class_='changeLanguageBox')
-            if not lang_box:
-                return languages
-            
-            lang_elements = lang_box.find_all(attrs={'data-lang-key': True, 'title': True})
-            
-            for element in lang_elements:
-                lang_key = element.get('data-lang-key')
-                lang_title = element.get('title')
+            if lang_box:
+                lang_elements = lang_box.find_all(attrs={'data-lang-key': True, 'title': True})
                 
+                for element in lang_elements:
+                    lang_key = element.get('data-lang-key')
+                    lang_title = element.get('title')
+                    
+                    if lang_key and lang_title:
+                        languages[lang_key] = lang_title
+
+            if languages:
+                return languages
+
+            for box in soup.select('button.link-box[data-language-id][data-language-label]'):
+                lang_key = box.get('data-language-id')
+                lang_title = box.get('data-language-label')
+
                 if lang_key and lang_title:
                     languages[lang_key] = lang_title
-            
+
             return languages
         except:
             return languages
@@ -147,33 +155,57 @@ class EpisodeStreamsAnalyzer:
         
         try:
             video_section = soup.find('div', class_='hosterSiteVideo')
-            if not video_section:
+            row_ul = None
+            if video_section:
+                row_ul = video_section.find('ul', class_='row')
+
+            if row_ul:
+                stream_items = row_ul.find_all('li', attrs={'data-lang-key': True, 'data-link-target': True})
+                
+                for item in stream_items:
+                    try:
+                        lang_key = item.get('data-lang-key')
+                        link_target = item.get('data-link-target')
+                        
+                        h4_element = item.find('h4')
+                        provider_name = h4_element.get_text(strip=True) if h4_element else 'Unknown'
+                        
+                        stream_url = urljoin(self.base_url, link_target)
+                        stream_id = None
+                        if '/redirect/' in stream_url:
+                            stream_id = stream_url.split('/redirect/')[-1]
+                        
+                        streams.append({
+                            'language_key': lang_key,
+                            'provider': provider_name,
+                            'stream_url': stream_url,
+                            'stream_id': stream_id
+                        })
+                    except:
+                        continue
+
+            if streams:
                 return streams
-            
-            row_ul = video_section.find('ul', class_='row')
-            if not row_ul:
-                return streams
-            
-            stream_items = row_ul.find_all('li', attrs={'data-lang-key': True, 'data-link-target': True})
-            
-            for item in stream_items:
+
+            for box in soup.select('button.link-box[data-play-url]'):
                 try:
-                    lang_key = item.get('data-lang-key')
-                    link_target = item.get('data-link-target')
-                    
-                    h4_element = item.find('h4')
-                    provider_name = h4_element.get_text(strip=True) if h4_element else 'Unknown'
-                    
-                    stream_url = urljoin(self.base_url, link_target)
-                    
+                    lang_key = box.get('data-language-id')
+                    provider_name = box.get('data-provider-name', 'Unknown')
+                    play_url = box.get('data-play-url')
+                    stream_id = box.get('data-link-id')
+
+                    if not play_url:
+                        continue
+
                     streams.append({
                         'language_key': lang_key,
                         'provider': provider_name,
-                        'stream_url': stream_url
+                        'stream_url': urljoin(self.base_url, play_url),
+                        'stream_id': stream_id
                     })
                 except:
                     continue
-            
+
             return streams
         except:
             return streams
@@ -271,7 +303,8 @@ class EpisodeStreamsAnalyzer:
                     
                     streams_by_language[lang_name].append({
                         'provider': stream['provider'],
-                        'stream_url': stream['stream_url']
+                        'stream_url': stream['stream_url'],
+                        'stream_id': stream.get('stream_id')
                     })
                 
                 episode_data = {
