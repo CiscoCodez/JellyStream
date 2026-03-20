@@ -14,7 +14,7 @@ Flags:
     -b [num]           Set batch processing size (default: 1000)
     --wait [num]       Wait time in minutes between series for Jellyfin metadata
     --clear-progress   Clear previous progress and start from beginning
-    --api-url [url]    Set custom API URL (default: http://localhost:3000/api/stream/redirect)
+    --api-url [url]    Set custom API URL (default: http://localhost:3000/stream/redirect)
 
 Features:
     - Automatically resumes where it left off (no manual start-from needed)
@@ -39,7 +39,7 @@ logging.basicConfig(
 )
 
 class JellyfinStructureGenerator:
-    def __init__(self, output_dir=None, api_base_url="http://localhost:3000/api/stream/redirect"):
+    def __init__(self, output_dir=None, api_base_url="http://localhost:3000/stream/redirect"):
         self.output_dir = Path(output_dir) if output_dir else Path(config.JELLYFIN_OUTPUT_DIR)
         self.api_base_url = api_base_url
         self.series_data = []
