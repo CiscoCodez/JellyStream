@@ -37,6 +37,19 @@ simple_cache = {}  # redirect_id -> {'stream_url': url, 'expires': timestamp, 'p
 season_caching_locks = set()  # Track which seasons are being cached
 CACHE_HOURS = 1  # 1 hour cache for HLS streams
 
+def initialize_components():
+    """Initialize shared API components for both Gunicorn and direct runs."""
+    global data_loader, redirect_resolver, voe_provider
+
+    if data_loader is not None and redirect_resolver is not None and voe_provider is not None:
+        return
+
+    logging.info("Loading API components...")
+    data_loader = DataLoader()
+    redirect_resolver = RedirectResolver()
+    voe_provider = VOEProvider()
+    data_loader.load()
+
 def is_cache_valid(cache_entry):
     """Check if cache entry is still valid"""
     return cache_entry['expires'] > time.time()
@@ -410,7 +423,6 @@ def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
 
 def main():
-    global data_loader, redirect_resolver, voe_provider
     
     print("🚀 Starting VOE-focused Streaming API...")
     logging.info("🚀 Starting VOE-focused Streaming API...")
@@ -418,18 +430,15 @@ def main():
     # Initialize components
     print("📁 Loading series data...")
     logging.info("📁 Loading series data...")
-    data_loader = DataLoader()
     
     print("🔧 Initializing redirect resolver...")
     logging.info("🔧 Initializing redirect resolver...")
-    redirect_resolver = RedirectResolver()
     
     print("🎬 Initializing VOE provider...")
     logging.info("🎬 Initializing VOE provider...")
-    voe_provider = VOEProvider()
     
     try:
-        data_loader.load()
+        initialize_components()
         stats_data = data_loader.get_stats()
 
         print(f"✅ Loaded {data_loader.get_series_count()} series with {data_loader.get_redirect_count()} streams")
@@ -489,6 +498,8 @@ def main():
         debug=False,
         threaded=True
     )
+
+initialize_components()
 
 if __name__ == '__main__':
     main()
