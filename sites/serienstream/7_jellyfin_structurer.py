@@ -208,10 +208,7 @@ class JellyfinStructureGenerator:
     def process_movies(self, series_dir, movies_data):
         """Process movies (Season 00)"""
         if not movies_data:
-            return
-        
-        season_dir = series_dir / "Season 00"
-        season_dir.mkdir(parents=True, exist_ok=True)
+            return 0
         
         movies_created = 0
         for movie_key, movie_data in movies_data.items():
@@ -232,7 +229,10 @@ class JellyfinStructureGenerator:
             if isinstance(used_language, str):
                 self.stats['movies_by_language'][used_language] += 1
             
-            # Create .strm file
+            # Create .strm file only when we have a playable stream.
+            series_dir.mkdir(parents=True, exist_ok=True)
+            season_dir = series_dir / "Season 00"
+            season_dir.mkdir(parents=True, exist_ok=True)
             strm_path = season_dir / f"S00E{movie_num.zfill(2)}.strm"
             if self.create_strm_file(strm_path, redirect_id):
                 self.stats['movies_created'] += 1
@@ -240,16 +240,17 @@ class JellyfinStructureGenerator:
         
         if movies_created > 0:
             self.stats['seasons_created'] += 1
+
+        return movies_created
     
     def process_episodes(self, series_dir, seasons_data):
         """Process regular episodes"""
         if not seasons_data:
-            return
+            return 0
         
+        total_created = 0
         for season_key, season_data in seasons_data.items():
             season_num = season_key.replace('season_', '')
-            season_dir = series_dir / f"Season {season_num.zfill(2)}"
-            season_dir.mkdir(parents=True, exist_ok=True)
             
             episodes_data = season_data.get('episodes', {})
             if not episodes_data:
@@ -274,14 +275,20 @@ class JellyfinStructureGenerator:
                 if isinstance(used_language, str):
                     self.stats['episodes_by_language'][used_language] += 1
                 
-                # Create .strm file
+                # Create .strm file only when we have a playable stream.
+                series_dir.mkdir(parents=True, exist_ok=True)
+                season_dir = series_dir / f"Season {season_num.zfill(2)}"
+                season_dir.mkdir(parents=True, exist_ok=True)
                 strm_path = season_dir / f"S{season_num.zfill(2)}E{episode_num.zfill(2)}.strm"
                 if self.create_strm_file(strm_path, redirect_id):
                     self.stats['episodes_created'] += 1
                     episodes_created += 1
+                    total_created += 1
             
             if episodes_created > 0:
                 self.stats['seasons_created'] += 1
+
+        return total_created
     
     def process_series(self, series_data, series_idx, total_series):
         """Process a single series"""
@@ -293,20 +300,17 @@ class JellyfinStructureGenerator:
         if series_idx % 100 == 0 or series_idx <= 10:
             print(f"📺 [{series_idx}/{total_series}] {safe_name}")
         
-        # Create series directory
-        series_dir.mkdir(parents=True, exist_ok=True)
-        
         # Process movies (Season 00)
         movies_data = series_data.get('movies', {})
-        self.process_movies(series_dir, movies_data)
+        movies_created = self.process_movies(series_dir, movies_data)
         
         # Process regular episodes
         seasons_data = series_data.get('seasons', {})
-        self.process_episodes(series_dir, seasons_data)
+        episodes_created = self.process_episodes(series_dir, seasons_data)
         
         # Count as processed
         self.stats['series_processed'] += 1
-        if movies_data or seasons_data:
+        if movies_created > 0 or episodes_created > 0:
             self.stats['series_created'] += 1
     
     def generate_structure(self, limit=None, batch_size=1000, wait_minutes=0):
