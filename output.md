@@ -1,72 +1,13 @@
-root@zero0xypher:/home/ubuntu# ls -la /media/jellyfin/serienstream | head
-find /media/jellyfin/serienstream -name '.structure_progress.json' -o -name '*.strm' | head -n 20
-python3 - <<'PY'
-import json
-from pathlib import Path
-
-p = Path("/home/ubuntu/JellyStream/sites/serienstream/data/final_series_data.json")
-data = json.loads(p.read_text(encoding="utf-8"))
-
-series_with_streams = 0
-episodes_with_streams = 0
-for s in data.get("series", []):
-    has_stream = False
-    for season in s.get("seasons", {}).values():
-        for ep in season.get("episodes", {}).values():
-            if ep.get("total_streams", 0) > 0:
-                episodes_with_streams += 1
-                has_stream = True
-    if has_stream:
-        series_with_streams += 1
-
-print("series_with_streams:", series_with_streams)
-print("episodes_with_streams:", episodes_with_streams)
-PY
-total 42964
-drwxr-xr-x     3 root root   4096 Mar 20 17:26 #COMPASS2.0 ANIMATION PROJECT
-drwxr-xr-x     4 root root   4096 Mar 20 17:26 #LikeMe
-drwxr-xr-x     4 root root   4096 Mar 20 17:26 #TextMeWhenYouGetHome
-drwxr-xr-x     3 root root   4096 Mar 20 17:26 #blackAF
-drwxr-xr-x     3 root root   4096 Mar 20 17:26 #unterAlmans – Migrantische Geschichte(n)
-drwxr-xr-x     3 root root   4096 Mar 20 17:26 (Un)Well
-drwxr-xr-x 10554 root root 466944 Mar 20 17:38 .
-drwxr-xr-x     3 root root   4096 Mar 20 17:26 ..
--rw-r--r--     1 root root 298534 Mar 20 17:27 .structure_progress.json
-/media/jellyfin/serienstream/.structure_progress.json
-/media/jellyfin/serienstream/(Un)Well/Season 01/S01E02.strm
-/media/jellyfin/serienstream/(Un)Well/Season 01/S01E01.strm
-/media/jellyfin/serienstream/(Un)Well/Season 01/S01E04.strm
-/media/jellyfin/serienstream/(Un)Well/Season 01/S01E03.strm
-/media/jellyfin/serienstream/(Un)Well/Season 01/S01E06.strm
-/media/jellyfin/serienstream/(Un)Well/Season 01/S01E05.strm
-/media/jellyfin/serienstream/#TextMeWhenYouGetHome/Season 02/S02E11.strm
-/media/jellyfin/serienstream/#TextMeWhenYouGetHome/Season 02/S02E06.strm
-/media/jellyfin/serienstream/#TextMeWhenYouGetHome/Season 02/S02E02.strm
-/media/jellyfin/serienstream/#TextMeWhenYouGetHome/Season 02/S02E05.strm
-/media/jellyfin/serienstream/#TextMeWhenYouGetHome/Season 02/S02E10.strm
-/media/jellyfin/serienstream/#TextMeWhenYouGetHome/Season 02/S02E12.strm
-/media/jellyfin/serienstream/#TextMeWhenYouGetHome/Season 02/S02E01.strm
-/media/jellyfin/serienstream/#TextMeWhenYouGetHome/Season 02/S02E07.strm
-/media/jellyfin/serienstream/#TextMeWhenYouGetHome/Season 02/S02E04.strm
-/media/jellyfin/serienstream/#TextMeWhenYouGetHome/Season 02/S02E13.strm
-/media/jellyfin/serienstream/#TextMeWhenYouGetHome/Season 02/S02E09.strm
-/media/jellyfin/serienstream/#TextMeWhenYouGetHome/Season 02/S02E03.strm
-/media/jellyfin/serienstream/#TextMeWhenYouGetHome/Season 02/S02E08.strm
-series_with_streams: 3089
-episodes_with_streams: 73671
-
-
-
-root@zero0xypher:/home/ubuntu/JellyStream/sites/serienstream# cd /home/ubuntu/JellyStream/sites/serienstream
+root@zero0xypher:/media/jellyfin# rm -rf /media/jellyfin/serienstream/*
+cd /home/ubuntu/JellyStream/sites/serienstream
 python3 7_jellyfin_structurer.py --clear-progress --api-url http://localhost:3000/stream/redirect
-🗑️  Progress cleared
 🚀 Starting Jellyfin structure generation...
 🌍 Language Priority: Englisch
-2026-03-20 18:07:48,876 - INFO - Loaded 10552 series from /home/ubuntu/JellyStream/sites/serienstream/data/final_series_data.json
+2026-03-20 22:06:24,490 - INFO - Loaded 10552 series from /home/ubuntu/JellyStream/sites/serienstream/data/final_series_data.json
 📊 Total series: 10,552
 ✅ Already processed: 0
 ⏳ Remaining: 10,552
-💾 Disk usage: 26.2% (50GB / 192GB)
+💾 Disk usage: 26.0% (50GB / 192GB)
 📺 [1/10552] und dann noch Paula
 📺 [2/10552] hackLegend of the Twilight
 📺 [3/10552] hackRoots
@@ -208,7 +149,7 @@ python3 7_jellyfin_structurer.py --clear-progress --api-url http://localhost:300
 ============================================================
 🌍 Language Priority: Englisch
 ✅ Series processed: 10,552
-✅ Series created: 10,552
+✅ Series created: 3,089
 ✅ Seasons created: 6,504
 ✅ Episodes created: 73,671
 🎬 Movies created: 0
@@ -228,17 +169,4 @@ python3 7_jellyfin_structurer.py --clear-progress --api-url http://localhost:300
    1. Scan library in Jellyfin
    2. Disable image downloads (recommended)
    3. Movies are in Season 00
-root@zero0xypher:/home/ubuntu/JellyStream/sites/serienstream#
-
-root@zero0xypher:/home/ubuntu/JellyStream/sites/serienstream# find /media/jellyfin/serienstream -name '*.strm' | head
-/media/jellyfin/serienstream/(Un)Well/Season 01/S01E02.strm
-/media/jellyfin/serienstream/(Un)Well/Season 01/S01E01.strm
-/media/jellyfin/serienstream/(Un)Well/Season 01/S01E04.strm
-/media/jellyfin/serienstream/(Un)Well/Season 01/S01E03.strm
-/media/jellyfin/serienstream/(Un)Well/Season 01/S01E06.strm
-/media/jellyfin/serienstream/(Un)Well/Season 01/S01E05.strm
-/media/jellyfin/serienstream/#TextMeWhenYouGetHome/Season 02/S02E11.strm
-/media/jellyfin/serienstream/#TextMeWhenYouGetHome/Season 02/S02E06.strm
-/media/jellyfin/serienstream/#TextMeWhenYouGetHome/Season 02/S02E02.strm
-/media/jellyfin/serienstream/#TextMeWhenYouGetHome/Season 02/S02E05.strm
 root@zero0xypher:/home/ubuntu/JellyStream/sites/serienstream#
