@@ -4,6 +4,7 @@ import logging
 import time
 import os
 import requests
+from bs4 import BeautifulSoup
 from flask import Flask, redirect, jsonify, request, Response
 from urllib.parse import urljoin, urlparse
 from data_loader import DataLoader
@@ -63,6 +64,35 @@ def cache_stream(redirect_id, stream_url, provider_type):
         'provider': provider_type
     }
     logging.info(f"📦 Cached {redirect_id} ({provider_type}) expires in {CACHE_HOURS}h")
+
+def get_fresh_stream_url(episode_info, redirect_id):
+    """Refresh the temporary SerienStream play URL from the episode page."""
+    stored_stream_url = episode_info.get('stream_url')
+    episode_url = episode_info.get('episode_data', {}).get('url')
+
+    if not episode_url:
+        return stored_stream_url
+
+    try:
+        response = requests.get(
+            episode_url,
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'},
+            timeout=15
+        )
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        for box in soup.select('button.link-box[data-link-id][data-play-url]'):
+            if box.get('data-link-id') == str(redirect_id):
+                play_url = box.get('data-play-url')
+                if play_url:
+                    fresh_url = urljoin('https://serienstream.to', play_url)
+                    logging.info(f"Refreshed stream URL for {redirect_id}")
+                    return fresh_url
+    except Exception as e:
+        logging.warning(f"Failed to refresh stream URL for {redirect_id}: {e}")
+
+    return stored_stream_url
 
 def _start_season_caching(episode_info, current_redirect_id):
     """Start background caching for the whole season"""
@@ -128,7 +158,7 @@ def _cache_season_background(season_episodes, skip_redirect_id, season_lock_key)
                 if not ep_info:
                     continue
 
-                stream_url = episode.get('stream_url')
+                stream_url = get_fresh_stream_url(ep_info, redirect_id)
                 if not stream_url:
                     continue
 
@@ -172,7 +202,7 @@ def stream_direct(redirect_id):
                 return jsonify({"error": f"Redirect ID {redirect_id} not found"}), 404
 
             source_site = episode_info.get('source_site', 'serienstream')
-            stream_url = episode_info.get('stream_url')
+            stream_url = get_fresh_stream_url(episode_info, redirect_id)
             provider_url = redirect_resolver.resolve_redirect(stream_url)
 
             if not provider_url:
@@ -225,7 +255,7 @@ def stream_redirect(redirect_id):
                 return jsonify({'error': 'Redirect ID not found'}), 404
 
             source_site = episode_info.get('source_site', 'serienstream')
-            stream_url = episode_info.get('stream_url')
+            stream_url = get_fresh_stream_url(episode_info, redirect_id)
             logging.info(f"🔍 Resolving {redirect_id} ({source_site}) for {episode_info['series_name']} S{episode_info['season_num']}E{episode_info['episode_num']}")
             
             # Step 1: Get the direct provider URL
@@ -364,7 +394,7 @@ def test_redirect(redirect_id):
     try:
         # Get episode info to determine source site
         episode_info = data_loader.find_episode_by_redirect(redirect_id)
-        redirect_url = episode_info.get('stream_url')
+        redirect_url = get_fresh_stream_url(episode_info, redirect_id)
         logging.info(f"🧪 Testing redirect resolution for {redirect_id} (serienstream)")
 
         # Step 1: Resolve redirect
