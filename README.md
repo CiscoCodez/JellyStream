@@ -15,9 +15,9 @@ JellyStream scrapes SerienStream for TV series metadata, filters the database to
 - **Providers:** VOE, Vidoza, Doodstream
 - **Languages:** English only
 
-**FlareSolverr Integration**: 🚧 In Progress
-- Cloudflare bypass for protected sites
-- Currently being evaluated for future-proofing
+**Browser Automation Layer**: 🚧 In Progress
+- Persistent Playwright profile for challenge-gated redirects
+- Structured so additional source-specific browser resolvers can be added later
 
 ## Architecture
 
@@ -132,7 +132,8 @@ Located in `api/`:
 **Core Files:**
 - `main.py` - Flask API server
 - `data_loader.py` - Loads SerienStream database
-- `redirector.py` - Resolves stream redirects
+- `redirector.py` - HTTP redirect fallback resolver
+- `browser/` - Persistent Playwright session and source-specific browser resolvers
 - `providers/*.py` - Provider-specific stream extractors
 
 **Endpoints:**
@@ -145,6 +146,8 @@ Located in `api/`:
 
 **Behavior:**
 - Loads SerienStream data only
+- Prefers a persistent Playwright browser session for challenge-gated source resolution
+- Falls back to HTTP redirect resolution when browser automation is unavailable
 - Uses English-only redirect selection for season caching
 - Serves redirects from `serienstream.to`
 
@@ -203,7 +206,8 @@ See [plugin/README.md](plugin/README.md) for detailed documentation, manual inst
 ### 1. Install Dependencies
 
 ```bash
-pip3 install flask requests beautifulsoup4
+pip3 install flask requests beautifulsoup4 playwright
+python3 -m playwright install chromium
 ```
 
 ### 2. Run Scrapers
@@ -290,6 +294,9 @@ Type=simple
 User=root
 WorkingDirectory=/opt/JellyStream/api
 Environment="PYTHONUNBUFFERED=1"
+Environment="JELLYSTREAM_PLAYWRIGHT_ENABLED=1"
+Environment="JELLYSTREAM_PLAYWRIGHT_HEADLESS=1"
+Environment="JELLYSTREAM_PLAYWRIGHT_PROFILE_DIR=/opt/JellyStream/api/browser/.playwright-profile"
 ExecStart=/usr/bin/python3 /opt/JellyStream/api/main.py
 Restart=always
 RestartSec=10
@@ -304,6 +311,15 @@ sudo systemctl enable jellystream-api
 sudo systemctl start jellystream-api
 sudo systemctl status jellystream-api
 ```
+
+If SerienStream presents a Turnstile challenge, bootstrap the persistent browser profile once:
+
+```bash
+cd /opt/JellyStream/api/browser
+JELLYSTREAM_PLAYWRIGHT_HEADLESS=0 python3 bootstrap_session.py
+```
+
+After the challenge is cleared in that browser session, stop the bootstrap script and restart the API service.
 
 ## Data Structure
 
